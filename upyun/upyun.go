@@ -16,25 +16,23 @@ import (
 )
 
 const (
-    VERSION            = "2.0"
+	VERSION = "2.0"
 
-    ED_AUTO            = "v0.api.upyun.com"
-    ED_TELECOM         = "v1.api.upyun.com"
-    ED_CNC             = "v2.api.upyun.com"
-    ED_CTT             = "v3.api.upyun.com"
+	ED_AUTO    = "v0.api.upyun.com"
+	ED_TELECOM = "v1.api.upyun.com"
+	ED_CNC     = "v2.api.upyun.com"
+	ED_CTT     = "v3.api.upyun.com"
 )
 
-
-
 type UpYun struct {
-	httpClient *http.Client
-	trans      *http.Transport
-	bucketName string
-	userName   string
-	passWord   string
-	apiDomain  string
-	contentMd5 string
-	fileSecret string
+	httpClient  *http.Client
+	trans       *http.Transport
+	bucketName  string
+	userName    string
+	passWord    string
+	apiDomain   string
+	contentMd5  string
+	fileSecret  string
 	respHeaders map[string]string
 
 	TimeOut int
@@ -145,46 +143,46 @@ func (u *UpYun) httpAction(method, uri string, headers map[string]string, inFile
 
 	for k, v := range headers {
 		req.Header.Add(k, v)
-        if u.Debug {
-            log.Printf("Request Header [%s]: %s", k, v)
-        }
+		if u.Debug {
+			log.Printf("Request Header [%s]: %s", k, v)
+		}
 	}
 
-    var contentLength int64 = 0
+	var contentLength int64 = 0
 	if (method == "PUT" || method == "POST") && inFile != nil {
 		method = "POST"
-        contentLength := FileSize(inFile)
-        req.Header.Add("Content-Length", strconv.FormatInt(contentLength, 10))
-        if u.contentMd5 != "" {
-            req.Header.Add("Content-MD5", u.contentMd5)
-            u.contentMd5 = ""
-        }
-        if u.fileSecret != "" {
-            req.Header.Add("Content-Secret", u.fileSecret)
-            u.fileSecret = ""
-        }
-        req.Body = inFile
-        if u.Debug {
-            log.Println("Content-Length: ", contentLength)
-            log.Println("Content-MD5: ", u.contentMd5)
-            log.Println("Content-Secret: ", u.fileSecret)
+		contentLength := FileSize(inFile)
+		req.Header.Add("Content-Length", strconv.FormatInt(contentLength, 10))
+		if u.contentMd5 != "" {
+			req.Header.Add("Content-MD5", u.contentMd5)
+			u.contentMd5 = ""
+		}
+		if u.fileSecret != "" {
+			req.Header.Add("Content-Secret", u.fileSecret)
+			u.fileSecret = ""
+		}
+		req.Body = inFile
+		if u.Debug {
+			log.Println("Content-Length: ", contentLength)
+			log.Println("Content-MD5: ", u.contentMd5)
+			log.Println("Content-Secret: ", u.fileSecret)
 		}
 	} else if method == "HEAD" {
 		req.Body = nil
 	}
 
 	req.Method = method
-    if u.Debug {
-        log.Println("Method: ", method)
-    }
+	if u.Debug {
+		log.Println("Method: ", method)
+	}
 
 	date := time.Now().UTC().Format(time.RFC1123)
 	req.Header.Add("Date", date)
-    signStr := u.sign(method, uri, date, contentLength)
+	signStr := u.sign(method, uri, date, contentLength)
 	req.Header.Add("Authorization", signStr)
 	if u.Debug {
 		log.Println("Date: ", date)
-        log.Println("Authorization: ", signStr)
+		log.Println("Authorization: ", signStr)
 	}
 
 	resp, err := u.httpClient.Do(req)
@@ -196,35 +194,35 @@ func (u *UpYun) httpAction(method, uri string, headers map[string]string, inFile
 	}
 
 	rc := resp.StatusCode
-    if rc != 200 {
-        return "", errors.New(fmt.Sprintf("%d: %s", rc, resp.Status))
-    }
-
-    u.respHeaders = make(map[string]string)
-    for k, v := range resp.Header {
-        if strings.Contains(k, "x-upyun") {
-            u.respHeaders[k] = v[0]
-            if u.Debug {
-                log.Printf("Response Header [%s]: %s", k, v)
-            }
-        }
-    }
-
-    // The http Client and Transport guarantee that Body is always non-nil
-    if method == "GET"  {
-        if outFile == nil {
-            return "", errors.New("not set output file")
-        }
-        _, err := io.Copy(outFile, resp.Body)
-        if err != nil {
-            return "", errors.New("copy to output file error: " + err.Error())
-        }
-    } else {
-        buf := bytes.NewBuffer(make([]byte, 0, 256))
-        buf.ReadFrom(resp.Body)
-        return buf.String(), nil
+	if rc != 200 {
+		return "", errors.New(fmt.Sprintf("%d: %s", rc, resp.Status))
 	}
-    return "", nil
+
+	u.respHeaders = make(map[string]string)
+	for k, v := range resp.Header {
+		if strings.Contains(k, "x-upyun") {
+			u.respHeaders[k] = v[0]
+			if u.Debug {
+				log.Printf("Response Header [%s]: %s", k, v)
+			}
+		}
+	}
+
+	// The http Client and Transport guarantee that Body is always non-nil
+	if method == "GET" {
+		if outFile == nil {
+			return "", errors.New("not set output file")
+		}
+		_, err := io.Copy(outFile, resp.Body)
+		if err != nil {
+			return "", errors.New("copy to output file error: " + err.Error())
+		}
+	} else {
+		buf := bytes.NewBuffer(make([]byte, 0, 256))
+		buf.ReadFrom(resp.Body)
+		return buf.String(), nil
+	}
+	return "", nil
 }
 
 /**
