@@ -192,6 +192,7 @@ func (u *UpYun) httpAction(method, uri string, headers map[string]string, inFile
 		}
 		return "", err
 	}
+	defer resp.Body.Close()
 
 	rc := resp.StatusCode
 	if rc != 200 {
