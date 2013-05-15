@@ -149,9 +149,12 @@ func (u *UpYun) httpAction(method, uri string, headers map[string]string, inFile
 	}
 
 	var contentLength int64 = 0
-	if (method == "PUT" || method == "POST") && inFile != nil {
+	if method == "PUT" || method == "POST" {
 		method = "POST"
-		contentLength := FileSize(inFile)
+		if inFile != nil {
+			contentLength = FileSize(inFile)
+			req.Body = inFile
+		}
 		req.Header.Add("Content-Length", strconv.FormatInt(contentLength, 10))
 		if u.contentMd5 != "" {
 			req.Header.Add("Content-MD5", u.contentMd5)
@@ -161,7 +164,6 @@ func (u *UpYun) httpAction(method, uri string, headers map[string]string, inFile
 			req.Header.Add("Content-Secret", u.fileSecret)
 			u.fileSecret = ""
 		}
-		req.Body = inFile
 		if u.Debug {
 			log.Println("Content-Length: ", contentLength)
 			log.Println("Content-MD5: ", u.contentMd5)
